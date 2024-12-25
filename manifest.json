@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Codeforces Helper",
+  "version": "1.0",
+  "description": "AI-powered assistant for Codeforces",
+  "icons": {
+    "16": "images/IMG_0006 copy.png",
+    "48": "images/IMG_0006 copy.png",
+    "128": "images/IMG_0006 copy.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/IMG_0006 copy.png",
+      "48": "images/IMG_0006 copy.png",
+      "128": "images/IMG_0006 copy.png"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*",
+    "https://*.codeforces.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://codeforces.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ]
+}
