@@ -64,7 +64,7 @@ async function analyzeCode() {
     }
 }
 
-// Add error boundary to the panel creation
+// Add conversation display to panel
 function createHelperPanel() {
     try {
         const existingPanel = document.getElementById('cf-helper-panel');
@@ -81,18 +81,94 @@ function createHelperPanel() {
             </div>
             <div class="panel-content">
                 <textarea id="code-input" placeholder="Paste your code here..."></textarea>
-                <button id="analyze-btn">Analyze</button>
-                <div id="analysis-result"></div>
+                <input type="text" id="message-input" placeholder="Ask a question..." class="w-full p-2 mb-2 border rounded">
+                <button id="analyze-btn">Send</button>
+                <div id="conversation-history" class="mt-4 max-h-96 overflow-y-auto"></div>
             </div>
         `;
         document.body.appendChild(panel);
 
         document.getElementById('close-panel').onclick = () => panel.classList.toggle('hidden');
-        document.getElementById('analyze-btn').onclick = analyzeCode;
+        document.getElementById('analyze-btn').onclick = sendMessage;
+
+        // Load existing conversation
+        loadConversation();
     } catch (error) {
         console.error('Error creating panel:', error);
     }
 }
 
-// Create panel when content script loads
-window.addEventListener('load', createHelperPanel);
+async function loadConversation() {
+    try {
+        const problemId = getProblemId(); // You'll need to implement this
+        const response = await fetch(`http://127.0.0.1:8000/conversation/${problemId}`);
+        const data = await response.json();
+        displayConversation(data.conversation_history);
+    } catch (error) {
+        console.error('Error loading conversation:', error);
+    }
+}
+
+function displayConversation(history) {
+    const conversationDiv = document.getElementById('conversation-history');
+    conversationDiv.innerHTML = history.map(msg => `
+        <div class="message ${msg.role}">
+            <strong>${msg.role}:</strong>
+            <p>${msg.content}</p>
+        </div>
+    `).join('');
+    conversationDiv.scrollTop = conversationDiv.scrollHeight;
+}
+
+async function sendMessage() {
+    const code = document.getElementById('code-input').value;
+    const message = document.getElementById('message-input').value;
+    const resultDiv = document.getElementById('conversation-history');
+    
+    try {
+        const problemId = getProblemId(); // Implement this to get unique problem identifier
+        const problemStatement = document.querySelector('.problem-statement');
+        const sampleTests = document.querySelector('.sample-tests');
+        
+        const problemData = {
+            statement: problemStatement?.querySelector('.header')?.textContent || '',
+            inputSpec: problemStatement?.querySelector('.input-specification')?.textContent || '',
+            outputSpec: problemStatement?.querySelector('.output-specification')?.textContent || '',
+            sampleTests: {
+                inputs: Array.from(sampleTests?.querySelectorAll('.input pre') || []).map(pre => pre.textContent),
+                outputs: Array.from(sampleTests?.querySelectorAll('.output pre') || []).map(pre => pre.textContent)
+            }
+        };
+
+        const response = await fetch('http://127.0.0.1:8000/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                code,
+                message,
+                problem_id: problemId,
+                problem_data: problemData
+            })
+        });
+
+        const data = await response.json();
+        displayConversation(data.conversation_history);
+        
+        // Clear message input but keep code
+        document.getElementById('message-input').value = '';
+    } catch (error) {
+        console.error('Error:', error);
+        resultDiv.innerHTML += `<p class="error">Error: ${error.message}</p>`;
+    }
+}
+
+// Helper function to get problem ID from URL or page
+function getProblemId() {
+    // Extract problem ID from Codeforces URL or page
+    // Example: from https://codeforces.com/problemset/problem/1A
+    const match = window.location.pathname.match(/problem\/(\d+[A-Z]\d*)/i);
+    return match ? match[1] : 'unknown';
+}
