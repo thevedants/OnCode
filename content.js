@@ -1,4 +1,3 @@
-// content.js
 async function analyzeCode() {
     const code = document.getElementById('code-input').value;
     const resultDiv = document.getElementById('analysis-result');
@@ -7,13 +6,18 @@ async function analyzeCode() {
     
     try {
         const problemStatement = document.querySelector('.problem-statement');
+        const sampleTests = document.querySelector('.sample-tests');
+        
         const problemData = {
             statement: problemStatement?.querySelector('.header')?.textContent || '',
             inputSpec: problemStatement?.querySelector('.input-specification')?.textContent || '',
-            outputSpec: problemStatement?.querySelector('.output-specification')?.textContent || ''
+            outputSpec: problemStatement?.querySelector('.output-specification')?.textContent || '',
+            sampleTests: {
+                inputs: Array.from(sampleTests?.querySelectorAll('.input pre') || []).map(pre => pre.textContent),
+                outputs: Array.from(sampleTests?.querySelectorAll('.output pre') || []).map(pre => pre.textContent)
+            }
         };
 
-        // First try to check if the server is running
         try {
             await fetch('http://127.0.0.1:8000/');
         } catch (error) {
@@ -26,7 +30,7 @@ async function analyzeCode() {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            credentials: 'omit',  // Important: don't send credentials
+            credentials: 'omit',
             mode: 'cors',
             body: JSON.stringify({
                 code: code,

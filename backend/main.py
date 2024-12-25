@@ -5,8 +5,8 @@ from pydantic import BaseModel
 from typing import List
 import os
 from dotenv import load_dotenv
-from mistralai.models.chat_completion import ChatMessage
-from mistralai.client import MistralClient
+import os
+from mistralai import Mistral
 
 # Load environment variables
 load_dotenv()
@@ -16,7 +16,7 @@ if not mistral_api_key:
     raise ValueError("MISTRAL_API_KEY not found in environment variables")
 
 # Initialize Mistral client with the new syntax
-client = MistralClient(api_key=mistral_api_key)
+client = Mistral(api_key=mistral_api_key)
 
 app = FastAPI()
 
@@ -67,15 +67,14 @@ async def options_analyze():
 @app.post("/analyze", response_model=CodeAnalysisResponse)
 async def analyze_code(request: CodeAnalysisRequest):
     try:
-        # Prepare the prompt for Mistral
-        system_message = ChatMessage(
-            role="system",
-            content="You are a code analysis assistant. Analyze the given code and provide helpful suggestions and improvements."
-        )
-        
-        user_message = ChatMessage(
-            role="user",
-            content=f"""
+        chat_response = client.chat.complete(
+            model="mistral-medium",
+            messages=[
+                {"role": "system",
+            "content": "You are a competitive program solver assistant. Analyze the given code and provide helpful suggestions and improvements, in context of the given problem that you need to solve. Adhere to the instructions given to you by the user. If the request made to you is not related to the problem, refuse to answer.",
+                },
+                {"role": "user",
+                 "content": f"""
             Problem Statement:
             {request.problem_data.get('statement', '')}
             
@@ -88,24 +87,14 @@ async def analyze_code(request: CodeAnalysisRequest):
             User's Code:
             {request.code}
             
-            Please analyze the code and provide:
-            1. Potential logical errors
-            2. Missing edge cases
-            3. Optimization suggestions
-            4. Any other helpful hints
-            
-            Provide your response as a list of concise points.
-            """
-        )
+            Please use this context to answer the user's question concisely.
+            """}
 
-        # Get analysis from Mistral
-        chat_response = client.chat(
-            model="mistral-medium",
-            messages=[system_message, user_message]
+            ]
         )
 
         # Process Mistral's response
-        analysis = chat_response.messages[0].content
+        analysis = chat_response.choices[0].message.content
         suggestions_and_hints = [line.strip('- ') for line in analysis.split('\n') if line.strip()]
 
         # Split into suggestions and hints
