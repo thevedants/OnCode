@@ -21,16 +21,18 @@
     "scripting",
     "storage"
   ],
-  "host_permissions": [
-    "http://127.0.0.1:8000/*",
-    "http://localhost:8000/*",
-    "https://*.codeforces.com/*"
-  ],
-  "content_scripts": [
-    {
-      "matches": ["https://codeforces.com/*"],
-      "js": ["content.js"],
-      "css": ["styles.css"]
-    }
-  ]
+    "content_scripts": [
+      {
+        "matches": [
+          "https://codeforces.com/*",
+          "https://*.codechef.com/*"
+        ],
+        "js": ["content.js"],
+        "css": ["styles.css"]
+      }
+    ],
+    "host_permissions": [
+      "https://*.codeforces.com/*",
+      "https://*.codechef.com/*"
+    ]
 }

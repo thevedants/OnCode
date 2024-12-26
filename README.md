@@ -1,59 +1,68 @@
 # OnCode
 
-# Competitive Programming Helper
+OnCode is a browser extension that enhances competitive programming platforms by providing AI-powered analysis and assistance. Currently supports LeetCode, Codeforces, CodeChef and AtCoder.
 
-## Overview  
-The Competitive Programming Helper is a browser extension designed to enhance the coding experience on platforms like Codeforces, CodeChef, LeetCode, and AtCoder. It provides real-time hints, code walkthroughs, edge case analysis, and time complexity explanations based on the user’s progress and code.
+## Features
 
----
+- 🤖 AI-powered code analysis and suggestions
+- 💬 Interactive chat interface for problem-specific discussions
+- 💾 Automatic code extraction from CodeChef's built-in IDE
+- 📝 Persistent conversation history for each problem
+- ⚡ Real-time responses with loading indicators
 
-## Key Features  
-- **Real-Time Hints**: Offers targeted hints based on your current code and highlights edge cases you may have missed.  
-- **Time Complexity Analysis**: Estimates the time complexity of your code and suggests optimizations.  
-- **Code Walkthrough**: Breaks down problems and helps you understand the logic step-by-step.  
-- **Multi-Platform Support**: Seamlessly integrates with popular competitive programming websites.  
-- **User-Friendly Interface**: Minimalist design ensures smooth interaction while coding.  
+## Supported Platforms
 
----
-
-## Installation  
-1. Clone the repository:  
-   ```bash
-   git clone https://github.com/yourusername/competitive-programming-helper.git
+- Leetcode
+- Codeforces
+- CodeChef
+- AtCoder
 
 
-2. Navigate to your browser’s extension settings and enable developer mode.  
-3. Load the unpacked extension by selecting the cloned repository folder.  
+## Installation
 
----
+1. Clone this repository
+```bash
+git clone https://github.com/yourusername/OnCode.git
+```
+2. Set up the backend
+```bash
+cd backend
+pip install -r requirements.txt
+```
+3. Create a .env file in the backend directory and add your Mistral API Key
+```python
+MISTRAL_API_KEY="your_api_key_here"
+```
+4. Start the backend server
+```bash
+uvicorn main:app --reload
+```
+5. Load the extension in Chrome
+  - Open Chrome and go to `chrome://extensions/`
+  - Enable "Developer mode"
+  - Click "Load unpacked"
+  - Select the extension directory
 
-## Usage  
-1. Open a supported competitive programming website.  
-2. Write your code in the problem’s editor.  
-3. The extension will provide:  
-   - Suggestions for missed edge cases.  
-   - Time complexity analysis.  
-   - Step-by-step hints to solve the problem.  
+## Usage
+1. Navigate to any supported competitive programming problem
+2. Click the OnCode extension icon
+3. The assistant panel will appear on the right side of the page
+4. Paste your code or use the "Use IDE Code" button (on CodeChef)
+5. Ask questions about the problem or request code analysis
+6. Use Ctrl/Cmd + Enter to quickly send messages
 
----
+## Tech Stack
+- Frontend: Vanilla JavaScript, Chrome Extension API
+- Backend: FastAPI, Python  
+- AI: Mistral AI
+- Storage: In-memory conversation history (per problem)
 
-## Tech Stack  
-- **Frontend**: React.js  
-- **Backend**: Python (Flask)  
-- **AI Model**: GPT-based model for generating hints and explanations.  
-- **Browser API**: Chrome/Edge browser extension API for seamless integration.  
+## Contributing
+Feel free to open issues or submit pull requests. Some areas for contribution:
+- Adding support for more platforms
+- Implementing persistent storage for conversations 
+- Improving code analysis capabilities
+- Enhancing the UI/UX
 
----
-
-## Contributing  
-Feel free to fork this repository and submit pull requests with your improvements.  
-
----
-
-## License  
-This project is licensed under the MIT License.
-
----
-
-## Contact  
-For questions or suggestions, contact: [your_email@example.com](mailto:your_email@example.com)
+## License
+MIT License
