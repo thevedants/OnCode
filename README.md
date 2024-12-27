@@ -6,9 +6,9 @@ OnCode is a browser extension that enhances competitive programming platforms by
 
 - 🤖 AI-powered code analysis and suggestions
 - 💬 Interactive chat interface for problem-specific discussions
-- 💾 Automatic code extraction from CodeChef's built-in IDE
+- 💾 Automatic code extraction from platform's built-in IDE
 - 📝 Persistent conversation history for each problem
-- ⚡ Real-time responses with loading indicators
+- ⚡ Real-time responses
 
 ## Supported Platforms
 
@@ -47,7 +47,7 @@ uvicorn main:app --reload
 1. Navigate to any supported competitive programming problem
 2. Click the OnCode extension icon
 3. The assistant panel will appear on the right side of the page
-4. Paste your code or use the "Use IDE Code" button (on CodeChef)
+4. Paste your code or use the "Use IDE Code" button
 5. Ask questions about the problem or request code analysis
 6. Use Ctrl/Cmd + Enter to quickly send messages
 
