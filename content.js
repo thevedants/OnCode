@@ -1,32 +1,92 @@
-function getProblemId() {
-    const url = window.location.pathname;
-    const host = window.location.hostname;
-
-    if (host.includes('codechef.com')) {
-        const match = url.match(/problems\/([A-Z0-9]+)/i);
-        return match ? match[1] : 'unknown';
-    } else {
-        // Original Codeforces logic
-        const match = url.match(/problem\/(\d+[A-Z]\d*)/i);
-        return match ? match[1] : 'unknown';
+// Helper function to get platform-specific selectors
+const PLATFORM_CONFIG = {
+    codeforces: {
+        matchURL: (host) => host.includes('codeforces.com'),
+        problemIdRegex: /problem\/(\d+[A-Z]\d*)/i,
+        selectors: {
+            statement: '.problem-statement',
+            header: '.header',
+            inputSpec: '.input-specification',
+            outputSpec: '.output-specification',
+            samples: {
+                container: '.sample-tests',
+                input: '.input pre',
+                output: '.output pre'
+            }
+        }
+    },
+    codechef: {
+        matchURL: (host) => host.includes('codechef.com'),
+        problemIdRegex: /problems\/([A-Z0-9]+)/i,
+        selectors: {
+            statement: '#problem-statement',
+            header: 'h3',
+            samples: {
+                input: '._values__container_x0ehp_226 ._values_x0ehp_226:first-child pre',
+                output: '._values__container_x0ehp_226 ._values_x0ehp_226:last-child pre'
+            },
+            editor: '#submit-ide-v2 .ace_layer.ace_text-layer .ace_line'
+        }
+    },
+    atcoder: {
+        matchURL: (host) => host.includes('atcoder.jp'),
+        problemIdRegex: /tasks\/([a-z0-9_]+)/i,
+        selectors: {
+            statement: '#task-statement',
+            header: 'div.h2',
+            problem: 'section',
+            editor: '#editor .ace_layer.ace_text-layer .ace_line'
+        }
+    },
+    leetcode: {
+        matchURL: (host) => host.includes('leetcode.com'),
+        problemIdRegex: /(problems|explore)\/([^/]+)/i,
+        selectors: {
+            statement: '[data-track-load="description_content"]',
+            samples: {
+                container: '.example-testcases'
+            },
+            editor: '.monaco-editor .view-lines .view-line'
+        }
     }
+};
+
+function getCurrentPlatform() {
+    const host = window.location.hostname;
+    return Object.keys(PLATFORM_CONFIG).find(platform => 
+        PLATFORM_CONFIG[platform].matchURL(host)
+    );
 }
 
-function getCodeFromCodeChefIDE() {
-    try {
-        // Use a more specific selector to get just the visible text layer
-        const textLayer = document.querySelector('#submit-ide-v2 .ace_layer.ace_text-layer');
-        if (!textLayer) return '';
+function getProblemId() {
+    const platform = getCurrentPlatform();
+    if (!platform) return 'unknown';
 
-        // Get only the unique lines by using the line numbers
-        const lineElements = Array.from(textLayer.querySelectorAll('.ace_line'));
-        const code = lineElements
+    const match = window.location.pathname.match(PLATFORM_CONFIG[platform].problemIdRegex);
+    
+    // Special handling for LeetCode
+    if (platform === 'leetcode') {
+        return match ? match[2] : 'unknown';  // Use second capture group for LeetCode
+    }
+    
+    // Default handling for other platforms
+    return match ? match[1] : 'unknown';
+}
+
+function getCodeFromIDE() {
+    const platform = getCurrentPlatform();
+    if (!platform) return '';
+
+    try {
+        const selector = PLATFORM_CONFIG[platform].selectors.editor;
+        const lines = document.querySelectorAll(selector);
+        if (!lines.length) return '';
+
+        return Array.from(lines)
             .map(line => line.textContent)
             .join('\n');
-            
-        return code;
     } catch (error) {
-        console.error('Error getting code from CodeChef IDE:', error);
+        console.error(`Error getting code from ${platform} IDE:`, error);
         return '';
     }
 }
@@ -78,42 +138,104 @@ async function sendMessage() {
     resultDiv.scrollTop = resultDiv.scrollHeight;
     
     try {
+        const platform = getCurrentPlatform();
         const problemId = getProblemId();
-        const host = window.location.hostname;
         let problemData;
 
-        if (host.includes('codechef.com')) {
-            const problemStatement = document.querySelector('#problem-statement');
-            const getContentAfterHeading = (headingText) => {
-                const headings = Array.from(problemStatement?.querySelectorAll('h3') || []);
-                const heading = headings.find(h3 => h3.textContent.includes(headingText));
-                return heading?.nextElementSibling?.textContent || '';
-            };
+        const config = PLATFORM_CONFIG[platform];
+        const base = document.querySelector(config.selectors.statement);
         
-            problemData = {
-                statement: problemStatement?.querySelector('h3')?.textContent || '',
-                inputSpec: getContentAfterHeading('Input Format'),
-                outputSpec: getContentAfterHeading('Output Format'),
-                sampleTests: {
-                    inputs: Array.from(problemStatement.querySelectorAll('._values__container_x0ehp_226 ._values_x0ehp_226:first-child pre') || [])
-                        .map(pre => pre.textContent),
-                    outputs: Array.from(problemStatement.querySelectorAll('._values__container_x0ehp_226 ._values_x0ehp_226:last-child pre') || [])
-                        .map(pre => pre.textContent)
+        if (base) {
+            switch(platform) {
+                case 'codeforces': {
+                    problemData = {
+                        statement: base?.querySelector(config.selectors.header)?.textContent || '',
+                        inputSpec: base?.querySelector(config.selectors.inputSpec)?.textContent || '',
+                        outputSpec: base?.querySelector(config.selectors.outputSpec)?.textContent || '',
+                        sampleTests: {
+                            inputs: Array.from(document.querySelectorAll(`${config.selectors.samples.container} ${config.selectors.samples.input}`))
+                                .map(pre => pre.textContent),
+                            outputs: Array.from(document.querySelectorAll(`${config.selectors.samples.container} ${config.selectors.samples.output}`))
+                                .map(pre => pre.textContent)
+                        }
+                    };
+                    break;
                 }
-            };
-        } else {
-            // Your existing Codeforces code
-            const problemStatement = document.querySelector('.problem-statement');
-            const sampleTests = document.querySelector('.sample-tests');
-            problemData = {
-                statement: problemStatement?.querySelector('.header')?.textContent || '',
-                inputSpec: problemStatement?.querySelector('.input-specification')?.textContent || '',
-                outputSpec: problemStatement?.querySelector('.output-specification')?.textContent || '',
-                sampleTests: {
-                    inputs: Array.from(sampleTests?.querySelectorAll('.input pre') || []).map(pre => pre.textContent),
-                    outputs: Array.from(sampleTests?.querySelectorAll('.output pre') || []).map(pre => pre.textContent)
+                case 'codechef': {
+                    const findSectionContent = (headingText) => {
+                        const headings = Array.from(base.querySelectorAll('h3'));
+                        const heading = headings.find(h3 => h3.textContent.includes(headingText));
+                        return heading?.nextElementSibling?.textContent || '';
+                    };
+
+                    problemData = {
+                        statement: base.querySelector(config.selectors.header)?.textContent || '',
+                        inputSpec: findSectionContent('Input Format'),
+                        outputSpec: findSectionContent('Output Format'),
+                        sampleTests: {
+                            inputs: Array.from(base.querySelectorAll(config.selectors.samples.input))
+                                .map(pre => pre.textContent),
+                            outputs: Array.from(base.querySelectorAll(config.selectors.samples.output))
+                                .map(pre => pre.textContent)
+                        }
+                    };
+                    break;
                 }
-            };
+                case 'atcoder': {
+                    const statement = base;
+                    const sections = Array.from(statement?.querySelectorAll('section') || []);
+                    let inputSpec = '', outputSpec = '';
+                    
+                    // Find input/output sections
+                    for (const section of sections) {
+                        const title = section.querySelector('h3')?.textContent || '';
+                        if (title.includes('Input')) {
+                            inputSpec = section.textContent.replace(title, '').trim();
+                        } else if (title.includes('Output')) {
+                            outputSpec = section.textContent.replace(title, '').trim();
+                        }
+                    }
+                
+                    // Get all h3s and find adjacent pre elements for samples
+                    const h3Elements = Array.from(statement?.querySelectorAll('h3') || []);
+                    const sampleInputs = [];
+                    const sampleOutputs = [];
+                
+                    h3Elements.forEach(h3 => {
+                        const text = h3.textContent;
+                        const nextPre = h3.nextElementSibling;
+                        if (text.includes('Sample Input') && nextPre?.tagName === 'PRE') {
+                            sampleInputs.push(nextPre.textContent);
+                        } else if (text.includes('Sample Output') && nextPre?.tagName === 'PRE') {
+                            sampleOutputs.push(nextPre.textContent);
+                        }
+                    });
+                
+                    problemData = {
+                        statement: statement?.querySelector('div.h2')?.textContent || '',
+                        inputSpec: inputSpec,
+                        outputSpec: outputSpec,
+                        sampleTests: {
+                            inputs: sampleInputs,
+                            outputs: sampleOutputs
+                        }
+                    };
+                    break;
+                }
+                case 'leetcode': {
+                    const content = base.textContent;
+                    problemData = {
+                        statement: content,
+                        inputSpec: '',
+                        outputSpec: '',
+                        sampleTests: {
+                            inputs: Array.from(document.querySelectorAll(config.selectors.samples.container))
+                                .map(example => example.textContent)
+                        }
+                    };
+                    break;
+                }
+            }
         }
 
         const response = await fetch('http://127.0.0.1:8000/chat', {
@@ -134,9 +256,9 @@ async function sendMessage() {
         loadingDiv.remove();
         displayConversation(data.conversation_history);
         
-        // Clear message input but keep code
         document.getElementById('message-input').value = '';
     } catch (error) {
+        loadingDiv.remove();
         console.error('Error:', error);
         resultDiv.innerHTML += `<p class="error">Error: ${error.message}</p>`;
     }
@@ -146,9 +268,12 @@ function createHelperPanel() {
     try {
         const existingPanel = document.getElementById('cf-helper-panel');
         if (existingPanel) {
-            existingPanel.classList.remove('hidden'); // Show panel if it exists
+            existingPanel.classList.remove('hidden');
             return;
         }
+
+        const platform = getCurrentPlatform();
+        const buttonLabel = platform ? `Use ${platform.charAt(0).toUpperCase() + platform.slice(1)} IDE Code` : '';
 
         const panel = document.createElement('div');
         panel.id = 'cf-helper-panel';
@@ -159,9 +284,7 @@ function createHelperPanel() {
         </div>
         <div class="panel-content">
             <textarea id="code-input" placeholder="Paste your code here..."></textarea>
-            ${window.location.hostname.includes('codechef.com') ? 
-                '<button id="use-ide-code" class="secondary-btn">Use IDE Code</button>' : 
-                ''}
+            ${platform ? `<button id="use-ide-code" class="secondary-btn">${buttonLabel}</button>` : ''}
             <textarea id="message-input" placeholder="Ask a question..." class="message-input"></textarea>
             <button id="analyze-btn">Send</button>
             <div id="conversation-history"></div>
@@ -169,7 +292,7 @@ function createHelperPanel() {
     `;
         document.body.appendChild(panel);
 
-        // Add styles for better scrolling and auto-expanding textarea
+        // Your existing styles remain the same
         const style = document.createElement('style');
         style.textContent = `
             #conversation-history {
@@ -186,29 +309,56 @@ function createHelperPanel() {
                 padding: 8px;
                 border-radius: 4px;
             }
-                .loading-dots {
-        display: inline-block;
-    }
-    
-    .loading-dots span {
-        animation: dots 1.5s infinite;
-        opacity: 0;
-        margin-left: 2px;
-    }
-    
-    .loading-dots span:nth-child(2) {
-        animation-delay: 0.5s;
-    }
-    
-    .loading-dots span:nth-child(3) {
-        animation-delay: 1s;
-    }
-    
-    @keyframes dots {
-        0% { opacity: 0; }
-        50% { opacity: 1; }
-        100% { opacity: 0; }
-    }
+            .loading-dots {
+                display: inline-block;
+            }
+            
+            .loading-dots span {
+                animation: dots 1.5s infinite;
+                opacity: 0;
+                margin-left: 2px;
+            }
+            
+            .loading-dots span:nth-child(2) {
+                animation-delay: 0.5s;
+            }
+                
+            
+            .loading-dots span:nth-child(3) {
+                animation-delay: 1s;
+            }
+            #cf-helper-panel {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    width: 350px;
+                    background: white;
+                    border: 1px solid #ccc;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    z-index: 9999;  // Increased z-index
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    color: #333;  // Ensure text is visible
+                }
+
+                #cf-helper-panel * {
+                    color: inherit;  // Make sure all text inherits color
+                }
+
+                .message strong {
+                    color: #000;  // Make usernames clearly visible
+                }
+
+                .message p {
+                    color: #333;  // Ensure message content is visible
+                }
+            
+            @keyframes dots {
+                0% { opacity: 0; }
+                50% { opacity: 1; }
+                100% { opacity: 0; }
+            }
             
             .assistant-message {
                 background-color: #f5f5f5;
@@ -222,25 +372,65 @@ function createHelperPanel() {
                 max-height: 80vh;
                 overflow-y: auto;
             }
+            #cf-helper-panel {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 300px;
+                background: white;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                z-index: 1000;
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+            #cf-helper-panel {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                width: 350px;  // Slightly wider for better readability
+                background: white;
+                border: 1px solid #ccc;
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                z-index: 9999;  // Higher z-index to ensure it's above site elements
+                max-height: 80vh;
+                overflow-y: auto;
+            }
+
+            .panel-header {
+                padding: 10px;
+                background: #f8f9fa;
+                border-bottom: 1px solid #eee;
+                border-radius: 8px 8px 0 0;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .panel-content {
+                padding: 15px;
+            }
             
             .message p {
                 white-space: pre-wrap;
                 margin: 5px 0;
             }
-                        .secondary-btn {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            background: #6c757d;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+            .secondary-btn {
+                width: 100%;
+                padding: 8px;
+                margin: 5px 0;
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
 
-        .secondary-btn:hover {
-            background: #5a6268;
-        }
+            .secondary-btn:hover {
+                background: #5a6268;
+            }
 
             #message-input {
                 width: 100%;
@@ -252,6 +442,32 @@ function createHelperPanel() {
                 border-radius: 4px;
                 resize: none;
                 overflow-y: hidden;
+            }
+            .error {
+                color: #721c24;
+                background-color: #f8d7da;
+                border-color: #f5c6cb;
+                padding: 10px;
+                border-radius: 4px;
+                margin: 5px 0;
+            }
+
+            #conversation-history::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            #conversation-history::-webkit-scrollbar-track {
+                background: #f1f1f1;
+                border-radius: 4px;
+            }
+
+            #conversation-history::-webkit-scrollbar-thumb {
+                background: #888;
+                border-radius: 4px;
+            }
+
+            #conversation-history::-webkit-scrollbar-thumb:hover {
+                background: #555;
             }
         `;
         document.head.appendChild(style);
@@ -269,18 +485,18 @@ function createHelperPanel() {
         
         document.getElementById('analyze-btn').onclick = sendMessage;
         
-        // Add enter key support for the message input (Ctrl/Cmd + Enter to send)
-        
-        if (window.location.hostname.includes('codechef.com')) {
+        // Add IDE button handler if on a supported platform
+        if (platform && document.getElementById('use-ide-code')) {
             document.getElementById('use-ide-code').onclick = () => {
-                const code = getCodeFromCodeChefIDE();
+                const code = getCodeFromIDE();
                 if (code) {
                     document.getElementById('code-input').value = code;
                 } else {
-                    alert('Could not fetch code from IDE. Please make sure you have some code in the editor.');
+                    alert(`Could not fetch code from ${platform} IDE. Please make sure you have some code in the editor.`);
                 }
             };
         }
+
         messageInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                 e.preventDefault();
@@ -290,10 +506,7 @@ function createHelperPanel() {
 
         // Load existing conversation
         loadConversation();
-        
-    } 
-    
-    catch (error) {
+    } catch (error) {
         console.error('Error creating panel:', error);
     }
 }

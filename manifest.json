@@ -22,17 +22,21 @@
     "storage"
   ],
     "content_scripts": [
-      {
-        "matches": [
-          "https://codeforces.com/*",
-          "https://*.codechef.com/*"
-        ],
-        "js": ["content.js"],
-        "css": ["styles.css"]
-      }
-    ],
-    "host_permissions": [
-      "https://*.codeforces.com/*",
-      "https://*.codechef.com/*"
-    ]
+    {
+      "matches": [
+        "https://codeforces.com/*",
+        "https://*.codechef.com/*",
+        "https://atcoder.jp/*",
+        "https://leetcode.com/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "host_permissions": [
+    "https://*.codeforces.com/*",
+    "https://*.codechef.com/*",
+    "https://atcoder.jp/*",
+    "https://leetcode.com/*"
+  ]
 }
